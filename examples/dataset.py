@@ -4,8 +4,8 @@ import pickle
 
 
 class SimpleDataset(Dataset):
-    def __init__(self, data_dir, file_type):
-        cache_file = f'{data_dir}/{file_type}.pkl'
+    def __init__(self, args, file_type):
+        cache_file = f'{args.data_dir}/{file_type}.pkl'
         data = pickle.load(open(cache_file, 'rb'))
 
         self.inputs = data['X']

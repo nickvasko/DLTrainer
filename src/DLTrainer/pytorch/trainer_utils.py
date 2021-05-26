@@ -36,7 +36,8 @@ def parse_input_arguments(additional_arg_parser):
     parser.add_argument("--save_dir", type=str, default="save", help="The path where the model and log will be saved.")
     parser.add_argument("--run_name", type=str, default='baseline', help="Name of your model training run.")
     parser.add_argument('--recompute-features', action='store_true',
-                        help="Whether to recompute dataset features if they exist")
+                        help="Whether to recompute dataset features if they exist. "
+                             "This argument can be used by your Dataset class.")
     parser.add_argument('--load_pretrained', action='store_true', help='Whether to load pretrained model')
     parser.add_argument('--pretrained_checkpoint', type=str, default='',
                         help="Directory of pretrained model. Required if load_pretrained is included.")
@@ -64,6 +65,13 @@ def parse_input_arguments(additional_arg_parser):
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--eval_every', type=int, default=5000)
     parser.add_argument('--logging_steps', type=int, default=1000, help='Log every X update steps')
+
+    parser.add_argument('--no_early_stopping', action='store_true',
+                        help='Prevent trainer from stopping early when model performance converges on Dev set.')
+    parser.add_argument('--early_stopping_steps', type=int, default=10,
+                        help='Stop training early if model does not exceed --early_stopping_tol for X steps.')
+    parser.add_argument('--early_stopping_tol', type=float, default=1e-5,
+                        help='Stop training early if model does not exceed X for --early_stopping_steps steps.')
 
     parser.add_argument('--no_cuda', action='store_true', help='Avoid using CUDA when available')
 
@@ -101,7 +109,9 @@ def train_setup(additional_arg_parser=None):
         raise ValueError('Must provide --pretrained_checkpoint when using --load_pretrained')
     if args.eval_batch_size == 0:
         args.eval_batch_size = args.train_batch_size
-    if not args.load_pretrained:
+    if args.load_pretrained:
+        args.save_dir = "/".join(args.pretrained_checkpoint.split('/')[:-1])
+    else:
         args.save_dir = get_save_dir(args.save_dir, args.run_name)
         if not os.path.exists(args.save_dir):
             os.makedirs(args.save_dir)

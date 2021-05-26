@@ -9,7 +9,7 @@ from torch.utils.data.distributed import DistributedSampler
 from transformers import get_linear_schedule_with_warmup
 from tensorboardX import SummaryWriter
 from tqdm import tqdm
-from collections import defaultdict
+
 
 class DLTrainer:
     """
@@ -66,20 +66,20 @@ class DLTrainer:
             if not os.path.exists(self.args.save_dir):
                 os.makedirs(self.args.save_dir)
 
-            train_dataset = dataset_class(self.args.data_dir, 'train')
+            train_dataset = dataset_class(self.args, 'train')
             train_sampler = RandomSampler(train_dataset)
             train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=self.args.train_batch_size)
             val_dataloader = None
             if not self.args.no_eval_during_training:
                 pass
-                val_dataset = dataset_class(self.args.data_dir, 'dev')
+                val_dataset = dataset_class(self.args, 'dev')
                 val_sampler = SequentialSampler(val_dataset) if self.args.local_rank == -1 else DistributedSampler(
                     val_dataset)
                 val_dataloader = DataLoader(val_dataset, sampler=val_sampler, batch_size=self.args.eval_batch_size)
             self.train(train_dataloader, val_dataloader)
 
         if self.args.do_eval or self.args.do_test:
-            eval_dataset = dataset_class(self.args.data_dir, 'dev' if self.args.do_eval else 'test')
+            eval_dataset = dataset_class(self.args, 'dev' if self.args.do_eval else 'test')
             eval_sampler = SequentialSampler(eval_dataset) if self.args.local_rank == -1 else DistributedSampler(
                 eval_dataset)
             eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=self.args.eval_batch_size)
@@ -157,7 +157,10 @@ class DLTrainer:
     def train(self, train_dataloader, val_dataloader):
         self.model.to(self.args.device)
         if self.args.local_rank in [-1, 0]:
-            tbx = SummaryWriter(self.args.save_dir)
+            tbx_path = self.args.save_dir + '/tensorboard'
+            if not os.path.exists(tbx_path):
+                os.makedirs(tbx_path)
+            tbx = SummaryWriter(tbx_path)
 
         if self.args.local_rank not in [-1, 0]:
             torch.distributed.barrier()
@@ -212,7 +215,7 @@ class DLTrainer:
 
         global_step = self.args.start_step
         tr_loss, logging_loss, avg_loss, tr_nb = 0.0, 0.0, 0.0, global_step
-        self.model.train()
+        eval_steps_no_increase = 0
         best_score = -float('inf')
         for epoch in range(self.args.start_epoch, self.args.num_train_epochs):
             for step, batch in enumerate(train_dataloader):
@@ -246,11 +249,27 @@ class DLTrainer:
                             for key, value in results.items():
                                 tbx.add_scalar('eval_{}'.format(key), value, global_step)
                                 self.logger.info(" %s = %s, best_score = %s", key, round(value, 4), round(best_score, 4))
+
                             score = results[list(results.keys())[0]]
+
+                            if score < best_score + self.args.early_stopping_tol:
+                                eval_steps_no_increase += 1
+                            else:
+                                eval_steps_no_increase = 0
+
                             if score > best_score:
                                 best_score = score
                                 self.save_model()
                                 self.logger.info("Saving model checkpoint to %s", self.model_checkpoint)
+
+                            if eval_steps_no_increase > self.args.early_stopping_steps:
+                                self.logger.info(f"Stopping at step {global_step} in epoch {epoch}. "
+                                                 f"Validation did not improve by {self.args.early_stopping_tol} for "
+                                                 f"more than {self.args.early_stopping_steps} steps.")
+                                return
+                        else:
+                            self.save_model()
+                            self.logger.info("Saving model checkpoint to %s", self.model_checkpoint)
 
     def eval_step(self, inputs, labels=None):
         """Perform a eval step.
@@ -258,6 +277,7 @@ class DLTrainer:
         Can be overwritten for special cases.
 
         :param inputs: (list) Batch inputs
+        :param labels: (torch.tensor) Gold labels for task, if provided
         :return: loss: (Any) training loss
         """
         if labels is not None:
