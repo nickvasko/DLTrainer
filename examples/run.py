@@ -1,5 +1,8 @@
 from model import SimpleConfig, SimpleModel
 from dataset import SimpleDataset
+from metrics import calculate_metrics
+import sys
+sys.path.append('/Users/nickvasko/projects/DLTrainer')
 from src.DLTrainer.pytorch import DLTrainer
 
 """MODELS Dictionary
@@ -33,4 +36,4 @@ def additional_arg_parser(parser):
 
 
 if __name__ == "__main__":
-    trainer = DLTrainer(MODELS, additional_arg_parser)
+    trainer = DLTrainer(MODELS, additional_arg_parser, calculate_metrics)

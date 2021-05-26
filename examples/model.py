@@ -22,12 +22,12 @@ class SimpleModel(nn.Module):
         self.criterion = nn.BCELoss()
 
     def forward(self, x, y=None):
-        hidden_state = self.hidden_layer(x)
+        hidden_state = self.hidden_layer(x.float())
         hidden_state = self.activation_fn(hidden_state)
-        output = self.output_layer(hidden_state)
+        output = self.output_layer(hidden_state).squeeze(-1)
+        output = nn.Sigmoid()(output)
 
         loss = None
         if y is not None:
-            loss = self.criterion(output, y)
-        return dict(loss=loss,
-                    output=output)
+            loss = self.criterion(output, y.float())
+        return loss, output

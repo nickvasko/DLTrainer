@@ -38,14 +38,16 @@ def parse_input_arguments(additional_arg_parser):
     parser.add_argument('--recompute-features', action='store_true',
                         help="Whether to recompute dataset features if they exist")
     parser.add_argument('--load_pretrained', action='store_true', help='Whether to load pretrained model')
-    parser.add_argument('--pretrained-checkpoint', type=str, default='',
+    parser.add_argument('--pretrained_checkpoint', type=str, default='',
                         help="Directory of pretrained model. Required if load_pretrained is included.")
-    parser.add_argument('--overwrite_save_dir', action='store_true', help='Overwrite the content of save_dir/run_name')
     parser.add_argument('--do_train', action='store_true', help="Whether to run training.")
     parser.add_argument('--do_eval', action='store_true', help="Whether to run evaluation.")
     parser.add_argument('--do_test', action='store_true', help="Whether to run test.")
-    parser.add_argument('--no_eval_during_training', action='store_false',
+    parser.add_argument('--no_eval_during_training', action='store_true',
                         help='Whether to block evaluation during training.')
+
+    parser.add_argument('--load_optimizer', action='store_true', help='Load saved optimizer from pretrained-checkpoint')
+    parser.add_argument('--load_scheduler', action='store_true', help='Load saved scheduler from pretrained-checkpoint')
 
     parser.add_argument('--train_batch_size', type=int, default=16,
                         help='Batch size for training, and evaluation if eval_batch_size=0')
@@ -93,6 +95,19 @@ def train_setup(additional_arg_parser=None):
 
     """
     args = parse_input_arguments(additional_arg_parser)
+    if args.do_eval or args.do_test:
+        args.load_pretrained = True
+    if args.load_pretrained and args.pretrained_checkpoint == '':
+        raise ValueError('Must provide --pretrained_checkpoint when using --load_pretrained')
+    if args.eval_batch_size == 0:
+        args.eval_batch_size = args.train_batch_size
+    if not args.load_pretrained:
+        args.save_dir = get_save_dir(args.save_dir, args.run_name)
+        if not os.path.exists(args.save_dir):
+            os.makedirs(args.save_dir)
+    args.start_epoch = 0
+    args.start_step = 0
+
     split_name = 'train' if args.do_train else 'validation' if args.do_eval else 'test'
     logger = get_logger(args.save_dir, 'log_train')
 
@@ -114,10 +129,6 @@ def train_setup(additional_arg_parser=None):
                    torch.distributed.get_world_size() if args.local_rank != -1 else 1)
 
     set_seed(args)
-
-    args.save_dir = get_save_dir(args.save_dir, args.run_name)
-    args.start_epoch = 0
-    args.start_step = 0
 
     return args, logger
 
