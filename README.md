@@ -6,7 +6,9 @@ This packages is primarily designed for running experiments from the command lin
 
 # Installation
 
-
+```sh
+pip install DLTrainer
+```
 
 # Usage
 
