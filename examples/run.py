@@ -36,4 +36,4 @@ def additional_arg_parser(parser):
 
 
 if __name__ == "__main__":
-    trainer = DLTrainer(MODELS, additional_arg_parser, calculate_metrics)
+    trainer = DLTrainer(MODELS, calculate_metrics, additional_arg_parser)

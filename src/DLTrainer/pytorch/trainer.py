@@ -15,15 +15,15 @@ class DLTrainer:
     """
     Base trainer class for training deep learning models.
     """
-    def __init__(self, MODELS, additional_arg_parser=None, calculate_metrics=None):
+    def __init__(self, MODELS, metric_fn=None, additional_arg_parser=None):
         """Constructor
 
         :param MODELS:
         :param additional_arg_parser:
-        :param calculate_metrics
+        :param metric_fn
         """
         self.args, self.logger = trainer_utils.train_setup(additional_arg_parser)
-        self.calculate_metrics = calculate_metrics
+        self.metric_fn = metric_fn
 
         # Barrier to make sure only the first process in distributed training downloads model & vocab
         if self.args.local_rank not in [-1, 0]:
@@ -315,10 +315,10 @@ class DLTrainer:
         all_labels = torch.cat(all_labels, dim=0)
 
         eval_loss = eval_loss / nb_eval_steps
-        if self.calculate_metrics is None:
+        if self.metric_fn is None:
             results = {'eval_loss': -eval_loss}
         else:
-            results = self.calculate_metrics(all_outputs, all_labels)
+            results = self.metric_fn(all_outputs, all_labels)
         return results
 
     def load_model(self, model_class):
