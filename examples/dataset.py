@@ -3,7 +3,7 @@ from torch.utils.data import Dataset
 import pickle
 import os
 
-from .util import create_sample_data
+from util import create_sample_data
 
 
 class SimpleDataset(Dataset):

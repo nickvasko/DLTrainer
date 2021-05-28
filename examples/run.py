@@ -1,9 +1,7 @@
 from model import SimpleConfig, SimpleModel
 from dataset import SimpleDataset
 from metrics import calculate_metrics
-import sys
-sys.path.append('/Users/nickvasko/projects/DLTrainer')
-from src.DLTrainer.pytorch import DLTrainer
+from DLTrainer.pytorch import DLTrainer
 
 """MODELS Dictionary
 The models dictionary contains the model classes to be used during training. 
