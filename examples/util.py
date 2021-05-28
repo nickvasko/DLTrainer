@@ -5,8 +5,8 @@ import pickle
 NUM_TRAIN_EXAMPLES = 100000
 
 
-def create_sample_data():
-    X, y = make_moons(n_samples=NUM_TRAIN_EXAMPLES, noise=0.1)
+def create_sample_data(num_examples):
+    X, y = make_moons(n_samples=num_examples, noise=0.1)
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=42)
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=1/9, random_state=42)
     pickle.dump({'X': X_train, 'y': y_train}, open("data/train.pkl", 'wb'))
@@ -15,4 +15,4 @@ def create_sample_data():
 
 
 if __name__ == "__main__":
-    create_sample_data()
+    create_sample_data(NUM_TRAIN_EXAMPLES)
