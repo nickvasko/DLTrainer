@@ -324,7 +324,7 @@ class DLTrainer:
     def load_model(self, model_class):
         config = dill.load(open(f'{self.model_checkpoint}/config.pt', 'rb'))
         model = model_class(config)
-        model.load_state_dict(torch.load(f'{self.model_checkpoint}/pytorch_model.bin'))
+        model.load_state_dict(torch.load(f'{self.model_checkpoint}/pytorch_model.bin', map_location=torch.device('cpu')))
         return model, config
 
     def save_model(self):
