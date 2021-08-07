@@ -67,22 +67,26 @@ class DLTrainer:
                 os.makedirs(self.args.save_dir)
 
             train_dataset = dataset_class(self.args, 'train')
+            collate_fn = train_dataset.collate_fn if hasattr(train_dataset, 'collate_fn') else None
             train_sampler = RandomSampler(train_dataset)
-            train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=self.args.train_batch_size)
+            train_dataloader = DataLoader(train_dataset, sampler=train_sampler, batch_size=self.args.train_batch_size,
+                                          collate_fn=collate_fn)
             val_dataloader = None
             if not self.args.no_eval_during_training:
                 pass
                 val_dataset = dataset_class(self.args, 'dev')
                 val_sampler = SequentialSampler(val_dataset) if self.args.local_rank == -1 else DistributedSampler(
                     val_dataset)
-                val_dataloader = DataLoader(val_dataset, sampler=val_sampler, batch_size=self.args.eval_batch_size)
+                val_dataloader = DataLoader(val_dataset, sampler=val_sampler, batch_size=self.args.eval_batch_size,
+                                            collate_fn=collate_fn)
             self.train(train_dataloader, val_dataloader)
 
         if self.args.do_eval or self.args.do_test:
             eval_dataset = dataset_class(self.args, 'dev' if self.args.do_eval else 'test')
             eval_sampler = SequentialSampler(eval_dataset) if self.args.local_rank == -1 else DistributedSampler(
                 eval_dataset)
-            eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=self.args.eval_batch_size)
+            eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=self.args.eval_batch_size,
+                                         collate_fn=collate_fn)
             results = self.evaluate(eval_dataloader)
             print(results)
 
