@@ -91,7 +91,7 @@ def parse_input_arguments(additional_arg_parser):
     return args
 
 
-def train_setup(additional_arg_parser=None):
+def train_setup(additional_arg_parser=None, args=None):
     """Parsing the training arguments from the command line.
     Setups up GPU training if applicable.
     Creates a logger for training/evaluation.
@@ -102,7 +102,8 @@ def train_setup(additional_arg_parser=None):
     :return: logger: (logging.Logger) Logger instance for logging events.
 
     """
-    args = parse_input_arguments(additional_arg_parser)
+    if args is None:
+        args = parse_input_arguments(additional_arg_parser)
     if args.do_eval or args.do_test:
         args.load_pretrained = True
     if args.load_pretrained and args.pretrained_checkpoint == '':
@@ -211,3 +212,45 @@ def get_save_dir(base_dir, name, id_max=100):
 
     raise RuntimeError('Too many save directories created with the same name. \
                        Delete old save directories or use another name.')
+
+
+class BaseTrainerArgs:
+    def __init__(self, model, data_dir='data', save_dir='save', run_name='baseline', recompute_features=False, load_pretrained=False, pretrained_checkpoint='',
+                 do_train=False, do_eval=False, do_test=False, no_eval_during_training=False, load_optimizer=False, load_scheduler=False,
+                 train_batch_size=16, eval_batch_size=4, num_train_epochs=1, gradient_accumulation_steps=1, lr=5e-5, weight_decay=0.0, adam_epsilon=1e-8,
+                 max_grad_norm=1.0, warmup_steps=0, seed=42, eval_every=5000, logging_steps=1000, no_early_stopping=False, early_stopping_steps=10,
+                 early_stopping_tol=1e-5, no_cuda=False, fp16=False, fp16_opt_level='01', local_rank=-1, node_index=-1, gpu_per_node=-1):
+        self.model=model
+        self.data_dir=data_dir
+        self.save_dir=save_dir
+        self.run_name=run_name
+        self.recompute_features=recompute_features
+        self.load_pretrained=load_pretrained
+        self.pretrained_checkpoint=pretrained_checkpoint
+        self.do_train=do_train
+        self.do_eval=do_eval
+        self.do_test=do_test
+        self.no_eval_during_training=no_eval_during_training
+        self.load_optimizer=load_optimizer
+        self.load_scheduler=load_scheduler
+        self.train_batch_size=train_batch_size
+        self.eval_batch_size=eval_batch_size
+        self.num_train_epochs=num_train_epochs
+        self.gradient_accumulation_steps=gradient_accumulation_steps
+        self.lr=lr
+        self.weight_decay=weight_decay
+        self.adam_epsilon=adam_epsilon
+        self.max_grad_norm=max_grad_norm
+        self.warmup_steps=warmup_steps
+        self.seed=seed
+        self.eval_every=eval_every
+        self.logging_steps=logging_steps
+        self.no_early_stopping=no_early_stopping
+        self.early_stopping_steps=early_stopping_steps
+        self.early_stopping_tol=early_stopping_tol
+        self.no_cuda=no_cuda
+        self.fp16=fp16
+        self.fp16_opt_level=fp16_opt_level
+        self.local_rank=local_rank
+        self.node_index=node_index
+        self.gpu_per_node=gpu_per_node

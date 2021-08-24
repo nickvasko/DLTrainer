@@ -15,14 +15,14 @@ class DLTrainer:
     """
     Base trainer class for training deep learning models.
     """
-    def __init__(self, MODELS, metric_fn=None, additional_arg_parser=None):
+    def __init__(self, MODELS, metric_fn=None, additional_arg_parser=None, args=None):
         """Constructor
 
         :param MODELS:
         :param additional_arg_parser:
         :param metric_fn
         """
-        self.args, self.logger = trainer_utils.train_setup(additional_arg_parser)
+        self.args, self.logger = trainer_utils.train_setup(additional_arg_parser, args)
         self.metric_fn = metric_fn
 
         # Barrier to make sure only the first process in distributed training downloads model & vocab
