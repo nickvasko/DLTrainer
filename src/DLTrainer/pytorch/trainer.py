@@ -75,6 +75,7 @@ class DLTrainer:
             if not self.args.no_eval_during_training:
                 pass
                 val_dataset = dataset_class(self.args, 'dev')
+                collate_fn = val_dataset.collate_fn if hasattr(val_dataset, 'collate_fn') else None
                 val_sampler = SequentialSampler(val_dataset) if self.args.local_rank == -1 else DistributedSampler(
                     val_dataset)
                 val_dataloader = DataLoader(val_dataset, sampler=val_sampler, batch_size=self.args.eval_batch_size,
@@ -83,6 +84,7 @@ class DLTrainer:
 
         if self.args.do_eval or self.args.do_test:
             eval_dataset = dataset_class(self.args, 'dev' if self.args.do_eval else 'test')
+            collate_fn = eval_dataset.collate_fn if hasattr(eval_dataset, 'collate_fn') else None
             eval_sampler = SequentialSampler(eval_dataset) if self.args.local_rank == -1 else DistributedSampler(
                 eval_dataset)
             eval_dataloader = DataLoader(eval_dataset, sampler=eval_sampler, batch_size=self.args.eval_batch_size,
@@ -238,11 +240,10 @@ class DLTrainer:
                     avg_loss = round((tr_loss - logging_loss) / (global_step - tr_nb), 4)
                     if global_step % self.args.logging_steps == 0:
                         self.logger.info(" steps: %s loss; %s", global_step, avg_loss)
-                    if self.args.local_rank in [-1, 0] and self.args.logging_steps > 0 \
-                        and global_step % self.args.logging_steps == 0:
+                    if self.args.local_rank in [-1, 0] and global_step % self.args.logging_steps == 0:
                         # log metrics
                         tbx.add_scalar('lr', self.scheduler.get_last_lr()[0], global_step)
-                        tbx.add_scalar('loss', (tr_loss - logging_loss) / self.args.logging_steps)
+                        tbx.add_scalar('loss', (tr_loss - logging_loss) / self.args.logging_steps, global_step)
                         logging_loss = tr_loss
                         tr_nb = global_step
                     if self.args.local_rank in [-1, 0] and self.args.eval_every > 0 \
@@ -258,6 +259,8 @@ class DLTrainer:
 
                             if score < best_score + self.args.early_stopping_tol:
                                 eval_steps_no_increase += 1
+                                patience = self.args.early_stopping_steps - eval_steps_no_increase
+                                self.logger.info(f"Performance increase less than tolerance. Patience decreasing to {patience}")
                             else:
                                 eval_steps_no_increase = 0
 
